@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SetBG"
+version = "6.0.2"
+dependencies = ["watchdog", "screeninfo", "pillow"]
+authors = [
+  {name = "Neal Stephenson", email = "nealstep@gmail.com"},
+  ]
+description = "Background Setter"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+
+[project.scripts]
+SetBG = "setbg.setbg:cli_setbg"
+RBG = "setbg.rbg:cli_rbg"
+RSBG = "setbg.setbg:cli_rsbg"

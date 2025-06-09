@@ -1,0 +1,4 @@
+.vscode
+build
+.mypy_cache
+*.egg-info
