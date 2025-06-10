@@ -1,15 +1,14 @@
-from PIL.Image import Resampling, Transpose
+from PIL.Image import Resampling, Transpose, UnidentifiedImageError
 from setbg.common import SetBGException
 
-# from PIL.Image import BICUBIC, ANTIALIAS, FLIP_LEFT_RIGHT
 from setbg.common import (
-    RSBG_IMG,
-    LNAME,
     BG_HOME,
     BG_NAME,
     ENC,
-    SCALE_MAX,
     FLIP_FIRST,
+    LNAME,
+    RSBG_IMG,
+    SCALE_MAX,
 )
 from setbg.common import r, system_name, window_manager
 
@@ -17,10 +16,10 @@ from logging import getLogger
 from math import ceil, floor
 from PIL.ImageOps import crop, expand
 from setbg.common import (
+    base_arg_handler,
+    base_args,
     check_env,
     check_image,
-    base_args,
-    base_arg_handler,
 )
 from subprocess import check_call, check_output
 
@@ -42,18 +41,18 @@ def scale_image(img, size):
     ratio = min(ratios)
     if ratio > SCALE_MAX:
         ratio = SCALE_MAX
-    log.debug("Ratios: {} -> {}".format(ratios, ratio))
+    log.debug(f"scale ratios: {ratios} -> {ratio}")
     if ratio != 1.0:
         for i in range(len(isize)):
             isize[i] = int(round(img.size[i] * ratio))
-        log.debug("New Size: {}".format(isize))
+        log.debug(f"scale to new size: {isize}")
         if ratio > 1.0:
             scaled_img = img.resize(isize, Resampling.BICUBIC)
         else:
             scaled_img = img.resize(isize, Resampling.LANCZOS)
     else:
         scaled_img = img
-    log.info("Scaled size: {}".format(scaled_img.size))
+    log.info(f"scaled size: {scaled_img.size}")
     return scaled_img
 
 
@@ -62,7 +61,7 @@ def tile_image(img, size, rfunc=floor):
     ratios = [0, 0]
     for ra in range(len(ratios)):
         ratios[ra] = int(rfunc(size[ra] / float(img.size[ra])))
-    log.debug("Ratios: {}".format(ratios))
+    log.debug(f"tile ratios: {ratios}")
     if not all([x == 1 for x in ratios]):
         isize = (img.size[0] * ratios[0], img.size[1] * ratios[1])
         tiled_img = imnew("RGB", isize)
@@ -86,18 +85,19 @@ def tile_image(img, size, rfunc=floor):
                     )
     else:
         tiled_img = img
+    log.info(f"tiled size: {tiled_img.size}")
     return tiled_img
 
 
 def make_strip(orig, size):
-    log.debug("Strip: {}".format(size))
+    log.debug(f"strip size: {size}")
     base_img = scale_image(orig, size)
     tiled_img = tile_image(base_img, size, rfunc=ceil)
     return tiled_img
 
 
 def x_stripe(x_strip, orig, x_size, striped_img, size):
-    log.debug("X Stripe")
+    log.debug("x stripe: {x_size}")
     xs_size = (x_strip, size[1])
     x_img = make_strip(orig, xs_size)
     striped_img.paste(x_img.transpose(Transpose.FLIP_LEFT_RIGHT), (0, 0))
@@ -109,23 +109,23 @@ def stripe_image(img, orig, size):
     "add stripes to image"
     x_strip = int(((size[0] - img.size[0]) / 2) + 0.9)
     y_strip = int(size[1] - img.size[1])
-    log.debug("Strips: {} {}".format(x_strip, y_strip))
+    log.debug(f"strips: {x_strip} {y_strip}")
     if x_strip or y_strip:
         striped_img = imnew("RGB", size)
         if x_strip and y_strip:
-            log.debug("Dual Strips")
+            log.debug("dual strips")
             x_stripe(x_strip, orig, img.size[0], striped_img, size)
             ys_size = (size[0] - (x_strip * 2), y_strip)
-            log.debug("Y Strip")
+            log.debug("y strip")
             y_img = make_strip(orig, ys_size)
             striped_img.paste(y_img, (x_strip, 0))
             striped_img.paste(img, (x_strip, y_strip))
         elif x_strip:
-            log.debug("Single X Strip")
+            log.debug("single x strip")
             x_stripe(x_strip, orig, img.size[0], striped_img, size)
             striped_img.paste(img, (x_strip, 0))
         elif y_strip:
-            log.debug("Single Y Strip")
+            log.debug("single y strip")
             ys_size = (size[0], y_strip)
             y_img = make_strip(orig, ys_size)
             striped_img.paste(y_img, (0, 0))
@@ -136,6 +136,7 @@ def stripe_image(img, orig, size):
 
 
 def xfwm4(bg_name: str) -> None:
+    "set background xfwm4"
     lines = check_output(
         ["xfconf-query", "--channel", "xfce4-desktop", "--list"]
     ).decode(ENC)
@@ -154,15 +155,17 @@ def xfwm4(bg_name: str) -> None:
 
 
 def windows(bg_name: str) -> None:
+    "set background for Windows"
     from ctypes import windll  # type: ignore
 
     windll.user32.SystemParametersInfoW(20, 0, bg_name, 3)
 
 
 def set_background(img: str) -> None:
+    "set background image"
     log.debug(f"image file: {img}")
     image = imopen(img)
-    log.debug("image size {}x{}".format(*image.size))
+    log.debug(f"image size: {image.size}")
     bg_name = pjoin(BG_HOME, BG_NAME)
     new_img = scale_image(image, r)
     new_img = tile_image(new_img, r)
@@ -172,18 +175,15 @@ def set_background(img: str) -> None:
         if window_manager[0] == "Xfwm4":
             xfwm4(bg_name)
         else:
-            raise SetBGException(
-                f"Unsupported WM for setting background: {window_manager[0]}"
-            )
+            raise SetBGException(f"Unsupported Linux WM: {window_manager[0]}")
     elif system_name == "Windows":
         windows(bg_name)
     else:
-        raise SetBGException(
-            f"Unsupported OS for setting background: {system_name}"
-        )
+        raise SetBGException(f"Unsupported OS: {system_name}")
 
 
 def cli_setbg() -> None:
+    "main entry point for SetBG CLI"
     try:
         check_env()
         parser = base_args(DESC)
@@ -191,25 +191,30 @@ def cli_setbg() -> None:
         args = base_arg_handler(parser)
         img = check_image(args.FILE, True)
         set_background(img)
+    except UnidentifiedImageError:
+        log.error(f"Unidentified image file: {args.FILE}")
     except SetBGException as e:
         log.error(str(e))
-        raise e
 
 
 def rsbg() -> None:
+    "set background to default image"
     set_background(RSBG_IMG)
 
 
 def cli_rsbg() -> None:
+    "main entry point for RSBG CLI"
     try:
         check_env()
         parser = base_args(DESC)
         base_arg_handler(parser)
         rsbg()
+    except UnidentifiedImageError:
+        log.error(f"Unidentified image file: {RSBG_IMG}")
     except SetBGException as e:
         log.error(str(e))
-        raise e
 
 
 if __name__ == "__main__":
+    "Run as a script to set background from command line"
     cli_setbg()

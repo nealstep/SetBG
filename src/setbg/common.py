@@ -14,67 +14,56 @@ from shutil import which
 from subprocess import check_output
 
 # constants
-LNAME = "SetBG"
-BG_HOME = expanduser("~/.bg")
-BG_NAME = "bg.jpg"
-RSBG_IMG = glob(expanduser("~/Documents/RSBG.*"))[0]
-RESOLUTION = "1920x1080"
-ENC = "utf-8"
-SLEEP = 180
-LG_FORMAT = "%(levelname)s:%(name)s:%(message)s"
-D_EXCLUDE = set([".thumbnails"])
+BG_HOME = expanduser("~/.bg")  # directory to store computed images
+BG_NAME = "bg.jpg"  # name of computed image
+BOUNCE = 0.25  # bounce time for directory scans
+D_EXCLUDE = set([".thumbnails"])  # directories to exclude from search
+ENC = "utf-8"  # default encoding
+FLIP_FIRST = False  # Flip first image in tiling operation
+LG_FORMAT = "%(levelname)s:%(name)s:%(message)s"  # default log format
+LG_LEVEL = "warning"  # default log level
 LG_LEVELS = {"info": INFO, "warning": WARNING, "debug": DEBUG}
-LG_LEVEL = "warning"
-SCALE_MAX = 2
-FLIP_FIRST = False
-TEXT_POS = "10,10"
-WM_NAME = 'wmctrl -m | grep Name | cut -f 2 -d " "'
+LNAME = "SetBG"  # logger name
+RESOLUTION = "1920x1080"  # default resolution
+RSBG_IMG = glob(expanduser("~/Documents/RSBG.*"))[0]  # default image to use
+SCALE_MAX = 2  # maximum scale factor for images
+SLEEP = 300  # default sleep time
+WM_NAME = 'wmctrl -m | grep Name | cut -f 2 -d " "'  # Get WM name
 
 # globals
-res_set = False
+r: list[int] = [0, 0]  # resolution
+res_set = False  # has the resolution been set?
+system_name = system()  # system name
 w = h = 2**20  # default to a large value
-r: list[int] = [0, 0]
-system_name = system()
-window_manager: list[str] = []
+window_manager: list[str] = []  # window manager name
 
+# Set up logging
 basicConfig(level=LG_LEVELS[LG_LEVEL], format=LG_FORMAT, encoding=ENC)
 log = getLogger(LNAME)
 
 
 class SetBGException(Exception):
+    """Custom exception for SetBG errors."""
+
     pass
 
 
-def base_args(desc: str) -> ArgumentParser:
-    parser = ArgumentParser(description=desc)
-    parser.add_argument(
-        "-S",
-        "--size",
-        default=RESOLUTION,
-        help=f"Overide screen size. Default ({RESOLUTION})",
-    )
-    parser.add_argument(
-        "-L",
-        "--log-level",
-        choices=LG_LEVELS,
-        default=LG_LEVEL,
-        help=f"Log level default ({LG_LEVEL}): {', '.join(LG_LEVELS)}",
-    )
-    return parser
-
-
 def check_image(image: str, check_exists=False) -> str:
+    "check image exists and is an image"
     image = realpath(expanduser(image))
     if check_exists:
         if not isfile(image):
             raise SetBGException(f"{image} does not exist")
     mt = guess_type(image)
-    if mt[0] and not mt[0].startswith("image"):
+    if mt[0] and mt[0].startswith("image"):
+        pass
+    else:
         raise SetBGException(f"{image} not an image")
     return image
 
 
 def check_env() -> None:
+    "check the environment is setup"
     global window_manager, RSBG_IMG
     if not exists(BG_HOME):
         mkdir(BG_HOME)
@@ -82,17 +71,19 @@ def check_env() -> None:
         if not isdir(BG_HOME):
             raise SetBGException(f"{BG_HOME} not a directory")
     RSBG_IMG = check_image(RSBG_IMG)
+    log.debug(f"System name: {system_name}")
     if system_name == "Linux":
         if not which("wmctrl"):
-            raise SetBGException("wmctrl not found")
+            raise SetBGException("wmctrl not found, please install")
         with open(devnull, "w") as null:
             output = check_output(WM_NAME, shell=True, stderr=null).strip()
             window_manager.append(output.decode(ENC))
+            log.debug(f"Window manager: {window_manager[0]}")
 
 
 def get_resolution(res: str) -> None:
     "get the system resolution"
-    global res_set, w, h
+    global res_set, w, h, r
     if res_set:
         return
     res_set = True
@@ -111,8 +102,29 @@ def get_resolution(res: str) -> None:
     log.debug(f"screen resolution {r[0]}x{r[1]}")
 
 
+def base_args(desc: str) -> ArgumentParser:
+    "standard arguments for SetBG and RSBG"
+    parser = ArgumentParser(description=desc)
+    parser.add_argument(
+        "-S",
+        "--size",
+        default=RESOLUTION,
+        help=f"Overide screen size. Default ({RESOLUTION})",
+    )
+    parser.add_argument(
+        "-L",
+        "--log-level",
+        choices=LG_LEVELS,
+        default=LG_LEVEL,
+        help=f"Log level default ({LG_LEVEL}): {', '.join(LG_LEVELS)}",
+    )
+    return parser
+
+
 def base_arg_handler(parser: ArgumentParser) -> Namespace:
+    "handle base arguments for SetBG and RSBG"
     args = parser.parse_args()
+    log.debug(f"Arguments: {args}")
     if args.log_level:
         log.setLevel(LG_LEVELS[args.log_level])
     get_resolution(args.size)

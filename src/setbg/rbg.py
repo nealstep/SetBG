@@ -1,23 +1,25 @@
 from datetime import datetime
+from PIL import UnidentifiedImageError
 from setbg.common import SetBGException
 from typing import Self
-from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
-from setbg.common import SLEEP, D_EXCLUDE, LNAME
+from setbg.common import BG_HOME, BOUNCE, D_EXCLUDE, LNAME, SLEEP
 
 from random import seed, shuffle
 
 from logging import getLogger
-from os import walk, listdir
+from os import getpid, kill, listdir, walk
 from os.path import isdir, realpath, expanduser
 from setbg.common import (
+    base_arg_handler,
+    base_args,
     check_env,
     check_image,
-    base_args,
-    base_arg_handler,
 )
 from setbg.setbg import set_background, rsbg
+from signal import signal, SIGUSR1
 from time import sleep
 
 from os.path import join as pjoin
@@ -28,9 +30,17 @@ DESC = "RBG: A Background Changer"
 log = getLogger(LNAME)
 
 
+class RBGWakeup(Exception):
+    "Custom exception to wake up RBG on USR1 signal"
+
+    pass
+
+
 class Images:
+    "Image List and Directory Handler" ""
 
     def __init__(self: Self) -> None:
+        "initialize arrays for per directory list and flat image list"
         self.dir_images: dict[str, list[str]] = {}
         self.images: list[str] = []
         self.index = 0
@@ -52,6 +62,7 @@ class Images:
 
     def update_dir_tree(self: Self, dir: str) -> None:
         "update images in a directory tree"
+        log.info(f"Updating directory tree: {dir}")
         self.dir_images[dir] = []
         for root, dirs, files in walk(dir):
             dirs[:] = [d for d in dirs if d not in D_EXCLUDE]
@@ -66,6 +77,7 @@ class Images:
 
     def update_dir(self: Self, dir: str) -> None:
         "update images in a directory"
+        log.info(f"Updating directory: {dir}")
         self.dir_images[dir] = []
         files = listdir(dir)
         for fn in files:
@@ -91,6 +103,8 @@ images = Images()
 
 
 class FSHandler(FileSystemEventHandler):
+    "File System Event Handler for Directory Changes"
+
     last_when = datetime.now()
     last_dir = ""
 
@@ -98,7 +112,7 @@ class FSHandler(FileSystemEventHandler):
         "rescan modified directories, ignore if less than a quarter second"
         if event.is_directory:
             if self.last_dir == event.src_path:
-                if (datetime.now() - self.last_when).total_seconds() < 0.25:
+                if (datetime.now() - self.last_when).total_seconds() < BOUNCE:
                     return
             self.last_when = datetime.now()
             self.last_dir = event.src_path
@@ -106,9 +120,16 @@ class FSHandler(FileSystemEventHandler):
             images.update_images()
 
 
+def signal_handler(signum, frame):
+    "handle USR1 signal to update images"
+    log.info("Received USR1 signal, updating images")
+    raise RBGWakeup
+
+
 def rbg(dirs: list[str], wait: float) -> None:
     "feed the background changer"
     observer = Observer()
+    signal(SIGUSR1, signal_handler)
     for dn in dirs:
         dname = realpath(expanduser(dn))
         if not isdir(dname):
@@ -126,8 +147,13 @@ def rbg(dirs: list[str], wait: float) -> None:
     while True:
         try:
             image = images.get_next_image()
+            print(f"Setting background to: {image}")
             set_background(image)
             sleep(wait)
+        except RBGWakeup:
+            log.info("Interrupted, next image")
+        except UnidentifiedImageError:
+            log.warning(f"Unidentified image file, skipping: {image}")
         except SetBGException as e:
             observer.stop()
             raise e
@@ -139,7 +165,6 @@ def rbg(dirs: list[str], wait: float) -> None:
 
 def cli_rbg() -> None:
     "handle command line arguments for RBG"
-    global w, h
     log.info("{} Started".format(NAME))
     try:
         check_env()
@@ -153,11 +178,19 @@ def cli_rbg() -> None:
         args = base_arg_handler(parser)
         wait = float(args.sleep)
         log.debug(f"sleep: {wait}")
+        with open(pjoin(BG_HOME, "rbg.pid"), "w") as fp:
+            fp.write(str(getpid()))
         rbg(args.DIRS, wait)
         rsbg()
     except SetBGException as e:
         log.error(str(e))
         raise e
+
+
+def cli_rbgn():
+    with open(pjoin(BG_HOME, "rbg.pid")) as fp:
+        pid = int(fp.read())
+        kill(pid, SIGUSR1)
 
 
 if __name__ == "__main__":
