@@ -1,4 +1,4 @@
-from PIL.Image import Resampling, Transpose, UnidentifiedImageError
+from PIL.Image import Resampling, Transpose
 from setbg.common import SetBGException
 
 from setbg.common import (
@@ -66,8 +66,11 @@ def tile_image(img, size, rfunc=floor):
         isize = (img.size[0] * ratios[0], img.size[1] * ratios[1])
         tiled_img = imnew("RGB", isize)
         # if we are tiling add border
-        img = crop(img, border=1)
-        img = expand(img, border=1, fill="black")
+        try:
+            img = crop(img, border=1)
+            img = expand(img, border=1, fill="black")
+        except Exception as e:
+            print(e)
         for x in range(ratios[0]):
             x_loc = img.size[0] * x
             for y in range(ratios[1]):
@@ -191,8 +194,6 @@ def cli_setbg() -> None:
         args = base_arg_handler(parser)
         img = check_image(args.FILE, True)
         set_background(img)
-    except UnidentifiedImageError:
-        log.error(f"Unidentified image file: {args.FILE}")
     except SetBGException as e:
         log.error(str(e))
 
@@ -209,8 +210,6 @@ def cli_rsbg() -> None:
         parser = base_args(DESC)
         base_arg_handler(parser)
         rsbg()
-    except UnidentifiedImageError:
-        log.error(f"Unidentified image file: {RSBG_IMG}")
     except SetBGException as e:
         log.error(str(e))
 
