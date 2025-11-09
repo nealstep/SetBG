@@ -178,7 +178,7 @@ def cli_rbg() -> None:
             "-s", "--sleep", default=SLEEP, help="Time to pause between images"
         )
         parser.add_argument(
-            "-n", "--notify", action="set_true", help="Use notification for directory changes"
+            "-n", "--notify", action="store_true", help="Use notification for directory changes"
         )
         parser.add_argument(
             "DIRS", nargs="+", help="Directories to choose images from"
