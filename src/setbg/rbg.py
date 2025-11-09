@@ -1,17 +1,25 @@
 from datetime import datetime
 from PIL import UnidentifiedImageError
-from setbg.common import SetBGException
+from socket import socket, timeout
 from typing import Self
 from watchdog.events import FileSystemEventHandler
+from watchdog.observers.api import BaseObserver
+
+from socket import AF_INET, SOCK_DGRAM
+
+from random import seed, shuffle
 from watchdog.observers import Observer
+
+from logging import getLogger
+from os import getpid, listdir, walk
+from os.path import isdir, realpath, expanduser
+
+from os.path import join as pjoin
+
+from setbg.common import SetBGException
 
 from setbg.common import BG_HOME, BOUNCE, D_EXCLUDE, LNAME, SLEEP
 
-from random import seed, shuffle
-
-from logging import getLogger
-from os import getpid, kill, listdir, walk
-from os.path import isdir, realpath, expanduser
 from setbg.common import (
     base_arg_handler,
     base_args,
@@ -19,21 +27,18 @@ from setbg.common import (
     check_image,
 )
 from setbg.setbg import set_background, rsbg
-from signal import signal, SIGUSR1
-from time import sleep
 
-from os.path import join as pjoin
 
 NAME = "RBG"
 DESC = "RBG: A Background Changer"
 
 log = getLogger(LNAME)
 
+ADDRESS = ("localhost", 37432)
+MESSAGE = "N"
+WAIT = 0.25
 
-class RBGWakeup(Exception):
-    "Custom exception to wake up RBG on USR1 signal"
-
-    pass
+observer: BaseObserver | None = None
 
 
 class Images:
@@ -116,21 +121,31 @@ class FSHandler(FileSystemEventHandler):
                     return
             self.last_when = datetime.now()
             self.last_dir = event.src_path
-            images.update_dir(event.src_path)
+            images.update_dir(str(event.src_path))
             images.update_images()
 
 
 def signal_handler(signum, frame):
-    "handle USR1 signal to update images"
-    log.info("Received USR1 signal, updating images")
-    raise RBGWakeup
+    "handle signals"
+    global observer
+    log.info("Signal received, exiting")
+    if observer:
+        observer.stop()
+    rsbg()
+    exit(0)
 
 
 def rbg(dirs: list[str], wait: float, notify: bool) -> None:
     "feed the background changer"
+    global observer
     if notify:
         observer = Observer()
-    signal(SIGUSR1, signal_handler)
+    else:
+        observer = None
+    # listen here
+    udp_socket = socket(AF_INET, SOCK_DGRAM)
+    udp_socket.bind(ADDRESS)
+    udp_socket.settimeout(WAIT)
     for dn in dirs:
         dname = realpath(expanduser(dn))
         if not isdir(dname):
@@ -138,32 +153,38 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
             continue
         log.info("Adding directory: {}".format(dname))
         images.update_dir_tree(dname)
-        if notify:
+        if observer:
             observer.schedule(FSHandler(), path=dname, recursive=True)
     if images.empty:
         raise SetBGException("No directories found, exiting")
     images.update_images()
+    image = None
     if not images.images:
         raise SetBGException("No images found, exiting")
-    if notify:
+    if observer:
         observer.start()
     while True:
         try:
             image = images.get_next_image()
             print(f"Setting background to: {image}")
             set_background(image)
-            sleep(wait)
-        except RBGWakeup:
-            log.info("Interrupted, next image")
+            for _ in range(int(wait / WAIT)):
+                try:
+                    x = udp_socket.recvfrom(1024)
+                    if x:
+                        log.info("change requested")
+                        break
+                except timeout:
+                    pass
         except UnidentifiedImageError:
             log.warning(f"Unidentified image file, skipping: {image}")
         except SetBGException as e:
-            if notify:
+            if observer:
                 observer.stop()
             raise e
         except KeyboardInterrupt:
             log.info("Exiting RBG")
-            if notify:
+            if observer:
                 observer.stop()
             break
 
@@ -178,7 +199,10 @@ def cli_rbg() -> None:
             "-s", "--sleep", default=SLEEP, help="Time to pause between images"
         )
         parser.add_argument(
-            "-n", "--notify", action="store_true", help="Use notification for directory changes"
+            "-n",
+            "--notify",
+            action="store_true",
+            help="Use notification for directory changes",
         )
         parser.add_argument(
             "DIRS", nargs="+", help="Directories to choose images from"
@@ -197,9 +221,8 @@ def cli_rbg() -> None:
 
 
 def cli_rbgn():
-    with open(pjoin(BG_HOME, "rbg.pid")) as fp:
-        pid = int(fp.read())
-        kill(pid, SIGUSR1)
+    sock = socket(AF_INET, SOCK_DGRAM)
+    sock.sendto(MESSAGE.encode(), ADDRESS)
 
 
 if __name__ == "__main__":
