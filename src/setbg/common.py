@@ -17,7 +17,7 @@ from subprocess import check_output
 BG_HOME = expanduser("~/.bg")  # directory to store computed images
 BG_NAME = "bg.jpg"  # name of computed image
 BOUNCE = 0.25  # bounce time for directory scans
-D_EXCLUDE = set([".thumbnails"])  # directories to exclude from search
+D_EXCLUDE = set([".thumbnails", "@eaDir"])  # directories to exclude from search
 ENC = "utf-8"  # default encoding
 FLIP_FIRST = False  # Flip first image in tiling operation
 LG_FORMAT = "%(levelname)s:%(name)s:%(message)s"  # default log format

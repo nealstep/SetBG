@@ -126,9 +126,10 @@ def signal_handler(signum, frame):
     raise RBGWakeup
 
 
-def rbg(dirs: list[str], wait: float) -> None:
+def rbg(dirs: list[str], wait: float, notify: bool) -> None:
     "feed the background changer"
-    observer = Observer()
+    if notify:
+        observer = Observer()
     signal(SIGUSR1, signal_handler)
     for dn in dirs:
         dname = realpath(expanduser(dn))
@@ -137,13 +138,15 @@ def rbg(dirs: list[str], wait: float) -> None:
             continue
         log.info("Adding directory: {}".format(dname))
         images.update_dir_tree(dname)
-        observer.schedule(FSHandler(), path=dname, recursive=True)
+        if notify:
+            observer.schedule(FSHandler(), path=dname, recursive=True)
     if images.empty:
         raise SetBGException("No directories found, exiting")
     images.update_images()
     if not images.images:
         raise SetBGException("No images found, exiting")
-    observer.start()
+    if notify:
+        observer.start()
     while True:
         try:
             image = images.get_next_image()
@@ -155,11 +158,13 @@ def rbg(dirs: list[str], wait: float) -> None:
         except UnidentifiedImageError:
             log.warning(f"Unidentified image file, skipping: {image}")
         except SetBGException as e:
-            observer.stop()
+            if notify:
+                observer.stop()
             raise e
         except KeyboardInterrupt:
             log.info("Exiting RBG")
-            observer.stop()
+            if notify:
+                observer.stop()
             break
 
 
@@ -173,14 +178,18 @@ def cli_rbg() -> None:
             "-s", "--sleep", default=SLEEP, help="Time to pause between images"
         )
         parser.add_argument(
+            "-n", "--notify", action="set_true", help="Use notification for directory changes"
+        )
+        parser.add_argument(
             "DIRS", nargs="+", help="Directories to choose images from"
         )
         args = base_arg_handler(parser)
         wait = float(args.sleep)
+        notify = bool(args.notify)
         log.debug(f"sleep: {wait}")
         with open(pjoin(BG_HOME, "rbg.pid"), "w") as fp:
             fp.write(str(getpid()))
-        rbg(args.DIRS, wait)
+        rbg(args.DIRS, wait, notify)
         rsbg()
     except SetBGException as e:
         log.error(str(e))
