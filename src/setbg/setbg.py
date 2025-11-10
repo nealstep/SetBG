@@ -168,6 +168,8 @@ def set_background(img: str) -> None:
     "set background image"
     log.debug(f"image file: {img}")
     image = imopen(img)
+    if image.mode != "RGB":
+        image = image.convert("RGB")
     log.debug(f"image size: {image.size}")
     bg_name = pjoin(BG_HOME, BG_NAME)
     new_img = scale_image(image, r)
