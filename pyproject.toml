@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SetBG"
-version = "6.1.1"
+version = "6.1.2"
 dependencies = ["watchdog", "screeninfo", "pillow"]
 authors = [
   {name = "Neal Stephenson", email = "nealstep@gmail.com"},
@@ -12,6 +12,7 @@ authors = [
 description = "Background Setter"
 readme = "README.md"
 license = "GPL-3.0-or-later"
+
 
 [project.scripts]
 SetBG = "setbg.setbg:cli_setbg"

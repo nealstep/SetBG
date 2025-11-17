@@ -10,6 +10,7 @@ from socket import AF_INET, SOCK_DGRAM
 from random import seed, shuffle
 from watchdog.observers import Observer
 
+from importlib.metadata import version
 from logging import getLogger
 from os import getpid, listdir, walk
 from os.path import isdir, realpath, expanduser
@@ -206,6 +207,12 @@ def cli_rbg() -> None:
         )
         parser.add_argument(
             "DIRS", nargs="+", help="Directories to choose images from"
+        )
+        parser.add_argument(
+            "--version",
+            action="version",
+            help="show version number",
+            version=f"%(prog)s {version}",
         )
         args = base_arg_handler(parser)
         wait = float(args.sleep)

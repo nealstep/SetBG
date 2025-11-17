@@ -12,6 +12,7 @@ from setbg.common import (
 )
 from setbg.common import r, system_name, window_manager
 
+from importlib.metadata import version
 from logging import getLogger
 from math import ceil, floor
 from PIL.ImageOps import crop, expand
@@ -193,6 +194,12 @@ def cli_setbg() -> None:
         check_env()
         parser = base_args(DESC)
         parser.add_argument("FILE", help="File to set on background")
+        parser.add_argument(
+            "--version",
+            action="version",
+            help="show version number",
+            version=f"%(prog)s {version}",
+        )
         args = base_arg_handler(parser)
         img = check_image(args.FILE, True)
         set_background(img)
