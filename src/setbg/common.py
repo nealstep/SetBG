@@ -105,15 +105,16 @@ def get_resolution(res: str) -> None:
     log.debug(f"screen resolution {r[0]}x{r[1]}")
 
 
-def base_args(desc: str) -> ArgumentParser:
+def base_args(desc: str, size=True) -> ArgumentParser:
     "standard arguments for SetBG and RSBG"
     parser = ArgumentParser(description=desc)
-    parser.add_argument(
-        "-S",
-        "--size",
-        default=RESOLUTION,
-        help=f"Overide screen size. Default ({RESOLUTION})",
-    )
+    if size:
+        parser.add_argument(
+            "-S",
+            "--size",
+            default=RESOLUTION,
+            help=f"Overide screen size. Default ({RESOLUTION})",
+        )
     parser.add_argument(
         "--version",
         action="version",

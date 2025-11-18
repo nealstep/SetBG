@@ -225,7 +225,7 @@ def cli_rbg() -> None:
 
 
 def cli_rbgn():
-    parser = base_args(DESC)
+    parser = base_args(DESC, size=False)
     parser.add_argument("-x", "--exit", action="store_true", help="exit")
     args = base_arg_handler(parser)
     if args.exit:

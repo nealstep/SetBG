@@ -30,9 +30,8 @@ SetBG sets and image on the background.
 options aste as above
 
 ```bash
-RBGN [-h|--help] [-S|--size SIZE] [--version] [-L {info,warning,debug}] [-x]|--exit
+RBGN [-h|--help] [--version] [-L {info,warning,debug}] [-x]|--exit
 '''
 
 RBGN tells RBG to change teh background now or exit if -x or --exit is provided.
-Other options other than SIZE are as above
-SIZE is ignored
+Other options as above
