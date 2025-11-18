@@ -193,6 +193,7 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
             break
 
 
+# TODO #1 add run as a demon
 def cli_rbg() -> None:
     "handle command line arguments for RBG"
     log.info("{} Started".format(NAME))
