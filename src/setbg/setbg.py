@@ -1,4 +1,4 @@
-from PIL.Image import Resampling, Transpose
+from PIL.Image import Resampling, Transpose, Image
 from setbg.common import SetBGException
 
 from setbg.common import (
@@ -12,7 +12,6 @@ from setbg.common import (
 )
 from setbg.common import r, system_name, window_manager
 
-from importlib.metadata import version
 from logging import getLogger
 from math import ceil, floor
 from PIL.ImageOps import crop, expand
@@ -168,7 +167,7 @@ def windows(bg_name: str) -> None:
 def set_background(img: str) -> None:
     "set background image"
     log.debug(f"image file: {img}")
-    image = imopen(img)
+    image: Image = imopen(img)
     if image.mode != "RGB":
         image = image.convert("RGB")
     log.debug(f"image size: {image.size}")
@@ -194,12 +193,6 @@ def cli_setbg() -> None:
         check_env()
         parser = base_args(DESC)
         parser.add_argument("FILE", help="File to set on background")
-        parser.add_argument(
-            "--version",
-            action="version",
-            help="show version number",
-            version=f"%(prog)s {version}",
-        )
         args = base_arg_handler(parser)
         img = check_image(args.FILE, True)
         set_background(img)

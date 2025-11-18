@@ -4,6 +4,7 @@ from logging import INFO, WARNING, DEBUG
 from os import devnull
 
 from glob import glob
+from importlib.metadata import version
 from logging import basicConfig, getLogger
 from mimetypes import guess_type
 from os import mkdir
@@ -112,6 +113,12 @@ def base_args(desc: str) -> ArgumentParser:
         "--size",
         default=RESOLUTION,
         help=f"Overide screen size. Default ({RESOLUTION})",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        help="show version number",
+        version=version("setbg"),
     )
     parser.add_argument(
         "-L",

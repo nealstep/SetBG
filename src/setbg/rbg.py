@@ -10,7 +10,6 @@ from socket import AF_INET, SOCK_DGRAM
 from random import seed, shuffle
 from watchdog.observers import Observer
 
-from importlib.metadata import version
 from logging import getLogger
 from os import getpid, listdir, walk
 from os.path import isdir, realpath, expanduser
@@ -36,7 +35,8 @@ DESC = "RBG: A Background Changer"
 log = getLogger(LNAME)
 
 ADDRESS = ("localhost", 37432)
-MESSAGE = "N"
+MSG_EXIT = "X"
+MSG_NEXT = "N"
 WAIT = 0.25
 
 observer: BaseObserver | None = None
@@ -171,8 +171,11 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
             set_background(image)
             for _ in range(int(wait / WAIT)):
                 try:
-                    x = udp_socket.recvfrom(1024)
-                    if x:
+                    x = udp_socket.recvfrom(1024)[0].decode()
+                    if x == MSG_EXIT:
+                        log.info("exit requested")
+                        raise KeyboardInterrupt
+                    else:
                         log.info("change requested")
                         break
                 except timeout:
@@ -208,12 +211,6 @@ def cli_rbg() -> None:
         parser.add_argument(
             "DIRS", nargs="+", help="Directories to choose images from"
         )
-        parser.add_argument(
-            "--version",
-            action="version",
-            help="show version number",
-            version=f"%(prog)s {version}",
-        )
         args = base_arg_handler(parser)
         wait = float(args.sleep)
         notify = bool(args.notify)
@@ -228,8 +225,15 @@ def cli_rbg() -> None:
 
 
 def cli_rbgn():
+    parser = base_args(DESC)
+    parser.add_argument("-x", "--exit", action="store_true", help="exit")
+    args = base_arg_handler(parser)
+    if args.exit:
+        msg = MSG_EXIT
+    else:
+        msg = MSG_NEXT
     sock = socket(AF_INET, SOCK_DGRAM)
-    sock.sendto(MESSAGE.encode(), ADDRESS)
+    sock.sendto(msg.encode(), ADDRESS)
 
 
 if __name__ == "__main__":
