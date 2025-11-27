@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 from PIL import UnidentifiedImageError
 from socket import socket, timeout
 from typing import Self
@@ -40,6 +41,14 @@ MSG_NEXT = "N"
 WAIT = 0.25
 
 observer: BaseObserver | None = None
+
+
+def is_directory(dname: str) -> Path:
+    "Return a path if its a directory"
+    dpath = Path(dname).expanduser()
+    if not dpath.is_dir():
+        raise NotADirectoryError
+    return dpath.resolve(True)
 
 
 class Images:
@@ -193,6 +202,12 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
             break
 
 
+def gtbg(dirs: list[str], tree: Path) -> None:
+    "Generate image tree of preset size"
+    # TODO #2 implement gtbg
+    pass
+
+
 # TODO #1 add run as a demon
 def cli_rbg() -> None:
     "handle command line arguments for RBG"
@@ -210,11 +225,24 @@ def cli_rbg() -> None:
             help="Use notification for directory changes",
         )
         parser.add_argument(
-            "DIRS", nargs="+", help="Directories to choose images from"
+            "-g",
+            "--gen-tree",
+            type=is_directory,
+            help="Generate a tree of prescaled images",
         )
+        parser.add_argument(
+            "DIRS",
+            nargs="+",
+            help="Directories to choose images from",
+        )
+        # TODO #3 handle size argument
         args = base_arg_handler(parser)
         wait = float(args.sleep)
         notify = bool(args.notify)
+        if args.gen_tree:
+            assert isinstance(args.gen_tree, Path)
+            gtbg(args.DIRS, args.gen_tree)
+            return
         log.debug(f"sleep: {wait}")
         with open(pjoin(BG_HOME, "rbg.pid"), "w") as fp:
             fp.write(str(getpid()))
