@@ -220,6 +220,7 @@ def gtbg(dirs: list[str], tree: Path) -> None:
             img_path = tree / Path(image).relative_to(Path(d))
             if not img_path.parent.exists():
                 mkdir(img_path.parent)
+            img_path = img_path.with_suffix(".jpg")
             try:
                 print(f"Generating: {img_path}")
                 gen_image(image, str(img_path))
