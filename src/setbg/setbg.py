@@ -33,10 +33,10 @@ DESC = "SetBG: A Background Setter"
 log = getLogger(LNAME)
 
 
-def scale_image(img, size):
+def scale_image(img: Image, size: tuple[int, int]) -> Image:
     "scale image to fit screen resolution"
-    ratios = [0, 0]
-    isize = [0, 0]
+    ratios: list[float] = [0, 0]
+    isize: list[int] = [0, 0]
     for ra in range(len(ratios)):
         ratios[ra] = size[ra] / float(img.size[ra])
     ratio = min(ratios)
@@ -59,24 +59,27 @@ def scale_image(img, size):
     return scaled_img
 
 
-def tile_image(img, size, rfunc=floor):
+def tile_image(img: Image, size: tuple[int, int], rfunc=floor):
     "tile image to fit screen resolution"
-    ratios = [0, 0]
+    ratios: list[float] = [0, 0]
     for ra in range(len(ratios)):
         ratios[ra] = int(rfunc(size[ra] / float(img.size[ra])))
     log.debug(f"tile ratios: {ratios}")
     if not all([x == 1 for x in ratios]):
-        isize = (img.size[0] * ratios[0], img.size[1] * ratios[1])
+        isize = (
+            round(img.size[0] * ratios[0]),
+            round(img.size[1] * ratios[1]),
+        )
         tiled_img = imnew("RGB", isize)
         # if we are tiling add border
         try:
             img = crop(img, border=1)
             img = expand(img, border=1, fill="black")
         except Exception as e:
-            log.error(f"exception: {e}")
-        for x in range(ratios[0]):
+            log.error(f"exception (): {e}")
+        for x in range(round(ratios[0])):
             x_loc = img.size[0] * x
-            for y in range(ratios[1]):
+            for y in range(round(ratios[1])):
                 y_loc = img.size[1] * y
                 if FLIP_FIRST:
                     flip = 1
@@ -95,14 +98,20 @@ def tile_image(img, size, rfunc=floor):
     return tiled_img
 
 
-def make_strip(orig, size):
+def make_strip(orig: Image, size: tuple[int, int]):
     log.debug(f"strip size: {size}")
     base_img = scale_image(orig, size)
     tiled_img = tile_image(base_img, size, rfunc=ceil)
     return tiled_img
 
 
-def x_stripe(x_strip, orig, x_size, striped_img, size):
+def x_stripe(
+    x_strip: int,
+    orig: Image,
+    x_size: int,
+    striped_img: Image,
+    size: tuple[int, int],
+):
     log.debug("x stripe: {x_size}")
     xs_size = (x_strip, size[1])
     x_img = make_strip(orig, xs_size)
@@ -111,7 +120,7 @@ def x_stripe(x_strip, orig, x_size, striped_img, size):
     return
 
 
-def stripe_image(img, orig, size):
+def stripe_image(img: Image, orig: Image, size: tuple[int, int]) -> Image:
     "add stripes to image"
     x_strip = int(((size[0] - img.size[0]) / 2) + 0.9)
     y_strip = int(size[1] - img.size[1])
@@ -174,9 +183,10 @@ def gen_image(img: str, dst: str) -> None:
     if image.mode != "RGB":
         image = image.convert("RGB")
     log.debug(f"image size: {image.size}")
-    new_img = scale_image(image, r)
-    new_img = tile_image(new_img, r)
-    new_img = stripe_image(new_img, image, r)
+    res = (r[0], r[1])
+    new_img = scale_image(image, res)
+    new_img = tile_image(new_img, res)
+    new_img = stripe_image(new_img, image, res)
     new_img.save(dst)
 
 

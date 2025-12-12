@@ -123,7 +123,7 @@ class FSHandler(FileSystemEventHandler):
     last_when = datetime.now()
     last_dir = ""
 
-    def on_modified(self, event):
+    def on_modified(self: Self, event):
         "rescan modified directories, ignore if less than a quarter second"
         if event.is_directory:
             if self.last_dir == event.src_path:
@@ -135,7 +135,7 @@ class FSHandler(FileSystemEventHandler):
             images.update_images()
 
 
-def signal_handler(signum, frame):
+def signal_handler(signum: int, _) -> None:
     "handle signals"
     global observer
     log.info("Signal received, exiting")
