@@ -164,18 +164,24 @@ def windows(bg_name: str) -> None:
     windll.user32.SystemParametersInfoW(20, 0, bg_name, 3)
 
 
-def set_background(img: str) -> None:
-    "set background image"
-    log.debug(f"image file: {img}")
+def gen_image(img: str, dst: str) -> None:
+    "generate background image of preset size"
+    log.debug(f"Generating image: {dst}")
     image: Image = imopen(img)
     if image.mode != "RGB":
         image = image.convert("RGB")
     log.debug(f"image size: {image.size}")
-    bg_name = pjoin(BG_HOME, BG_NAME)
     new_img = scale_image(image, r)
     new_img = tile_image(new_img, r)
     new_img = stripe_image(new_img, image, r)
-    new_img.save(bg_name)
+    new_img.save(dst)
+
+
+def set_background(img: str) -> None:
+    "set background image"
+    log.debug(f"image file: {img}")
+    bg_name = pjoin(BG_HOME, BG_NAME)
+    gen_image(img, bg_name)
     if system_name == "Linux":
         if window_manager[0] == "Xfwm4":
             xfwm4(bg_name)

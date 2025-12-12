@@ -12,7 +12,7 @@ from random import seed, shuffle
 from watchdog.observers import Observer
 
 from logging import getLogger
-from os import getpid, listdir, walk
+from os import getpid, listdir, walk, mkdir
 from os.path import isdir, realpath, expanduser
 
 from os.path import join as pjoin
@@ -27,7 +27,7 @@ from setbg.common import (
     check_env,
     check_image,
 )
-from setbg.setbg import set_background, rsbg
+from setbg.setbg import set_background, rsbg, gen_image
 
 
 NAME = "RBG"
@@ -166,7 +166,7 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
         if observer:
             observer.schedule(FSHandler(), path=dname, recursive=True)
     if images.empty:
-        raise SetBGException("No directories found, exiting")
+        raise SetBGException("No images found, exiting")
     images.update_images()
     image = None
     if not images.images:
@@ -205,7 +205,28 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
 def gtbg(dirs: list[str], tree: Path) -> None:
     "Generate image tree of preset size"
     # TODO #2 implement gtbg
-    pass
+    print(tree)
+    print(dirs)
+    for dn in dirs:
+        dname = realpath(expanduser(dn))
+        if not isdir(dname):
+            log.warning("Skipping non directory: {}".format(dname))
+            continue
+        log.info("Adding directory: {}".format(dname))
+        images.update_dir_tree(dname)
+    for d in images.dir_images:
+        for image in images.dir_images[d]:
+            print(f"Processing: {image}")
+            img_path = tree / Path(image).relative_to(Path(d))
+            if not img_path.parent.exists():
+                mkdir(img_path.parent)
+            try:
+                print(f"Generating: {img_path}")
+                gen_image(image, str(img_path))
+            except UnidentifiedImageError:
+                log.warning(f"Unidentified image file, skipping: {image}")
+            print(str(img_path))
+    print("Done")
 
 
 # TODO #1 add run as a demon
