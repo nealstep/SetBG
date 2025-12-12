@@ -43,13 +43,18 @@ def scale_image(img: Image, size: tuple[int, int]) -> Image:
     if ratio > SCALE_MAX:
         ratio = SCALE_MAX
     log.debug(f"scale ratios: {ratios} -> {ratio}")
-    if ratio != 1.0:
-        for i in range(len(isize)):
-            isize[i] = int(round(img.size[i] * ratio))
-            if abs(isize[i] - r[i]) < TOLERANCE:
-                isize[i] = r[i]
+    scale = 0
+    for i in range(len(isize)):
+        isize[i] = int(round(img.size[i] * ratio))
+        if abs(isize[i] - r[i]) < TOLERANCE:
+            isize[i] = r[i]
+        if isize[i] > img.size[i]:
+            scale = 1
+        elif isize[i] < img.size[i]:
+            scale = -1
+    if scale:
         log.debug(f"scale to new size: {isize}")
-        if ratio > 1.0:
+        if scale > 0:
             scaled_img = img.resize(isize, Resampling.BICUBIC)
         else:
             scaled_img = img.resize(isize, Resampling.LANCZOS)
@@ -76,7 +81,9 @@ def tile_image(img: Image, size: tuple[int, int], rfunc=floor):
             img = crop(img, border=1)
             img = expand(img, border=1, fill="black")
         except Exception as e:
+            print(img.info)
             log.error(f"exception (): {e}")
+            exit(1)
         for x in range(round(ratios[0])):
             x_loc = img.size[0] * x
             for y in range(round(ratios[1])):
