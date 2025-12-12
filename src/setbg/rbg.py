@@ -176,7 +176,7 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
     while True:
         try:
             image = images.get_next_image()
-            print(f"Setting background to: {image}")
+            log.info(f"Setting background to: {image}")
             set_background(image)
             for _ in range(int(wait / WAIT)):
                 try:
@@ -204,9 +204,6 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
 
 def gtbg(dirs: list[str], tree: Path) -> None:
     "Generate image tree of preset size"
-    # TODO #2 implement gtbg
-    print(tree)
-    print(dirs)
     for dn in dirs:
         dname = realpath(expanduser(dn))
         if not isdir(dname):
@@ -216,18 +213,18 @@ def gtbg(dirs: list[str], tree: Path) -> None:
         images.update_dir_tree(dname)
     for d in images.dir_images:
         for image in images.dir_images[d]:
-            print(f"Processing: {image}")
+            log.info(f"Processing: {image}")
             img_path = tree / Path(image).relative_to(Path(d))
             if not img_path.parent.exists():
                 mkdir(img_path.parent)
             img_path = img_path.with_suffix(".jpg")
             try:
-                print(f"Generating: {img_path}")
+                log.debug(f"Generating: {img_path}")
                 gen_image(image, str(img_path))
             except UnidentifiedImageError:
                 log.warning(f"Unidentified image file, skipping: {image}")
-            print(str(img_path))
-    print("Done")
+    nm_file = tree / ".nomedia"
+    nm_file.touch(exist_ok=True)
 
 
 # TODO #1 add run as a demon

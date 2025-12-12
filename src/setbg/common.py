@@ -32,6 +32,7 @@ RSBG_IMG = glob(expanduser("~/Documents/RSBG.*"))[0]  # default image to use
 SCALE_MAX = 2  # maximum scale factor for images
 SLEEP = 300  # default sleep time
 WM_NAME = 'wmctrl -m | grep Name | cut -f 2 -d " "'  # Get WM name
+TOLERANCE = 10  # pixels tolerance for resolution matching
 
 # globals
 r: list[int] = [0, 0]  # resolution
@@ -141,6 +142,7 @@ def base_arg_handler(parser: ArgumentParser) -> Namespace:
         res_set = True  # noqa: F841
         r[0] = int(args.size.split("x")[0])
         r[1] = int(args.size.split("x")[1])
+        log.debug(f"Using resolution: {r[0]}x{r[1]}")
     else:
         get_resolution(args.size)
     return args

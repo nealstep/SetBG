@@ -9,6 +9,7 @@ from setbg.common import (
     LNAME,
     RSBG_IMG,
     SCALE_MAX,
+    TOLERANCE,
 )
 from setbg.common import r, system_name, window_manager
 
@@ -45,6 +46,8 @@ def scale_image(img, size):
     if ratio != 1.0:
         for i in range(len(isize)):
             isize[i] = int(round(img.size[i] * ratio))
+            if abs(isize[i] - r[i]) < TOLERANCE:
+                isize[i] = r[i]
         log.debug(f"scale to new size: {isize}")
         if ratio > 1.0:
             scaled_img = img.resize(isize, Resampling.BICUBIC)
@@ -70,7 +73,7 @@ def tile_image(img, size, rfunc=floor):
             img = crop(img, border=1)
             img = expand(img, border=1, fill="black")
         except Exception as e:
-            print(e)
+            log.error(f"exception: {e}")
         for x in range(ratios[0]):
             x_loc = img.size[0] * x
             for y in range(ratios[1]):
