@@ -132,13 +132,13 @@ def base_args(desc: str, size=True) -> ArgumentParser:
     return parser
 
 
-def base_arg_handler(parser: ArgumentParser) -> Namespace:
+def base_arg_handler(parser: ArgumentParser, size=True) -> Namespace:
     "handle base arguments for SetBG and RSBG"
     args = parser.parse_args()
     log.debug(f"Arguments: {args}")
     if args.log_level:
         log.setLevel(LG_LEVELS[args.log_level])
-    if args.size:
+    if size and args.size:
         res_set = True  # noqa: F841
         r[0] = int(args.size.split("x")[0])
         r[1] = int(args.size.split("x")[1])
