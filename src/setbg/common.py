@@ -138,11 +138,12 @@ def base_arg_handler(parser: ArgumentParser, size=True) -> Namespace:
     log.debug(f"Arguments: {args}")
     if args.log_level:
         log.setLevel(LG_LEVELS[args.log_level])
-    if size and args.size:
-        res_set = True  # noqa: F841
-        r[0] = int(args.size.split("x")[0])
-        r[1] = int(args.size.split("x")[1])
-        log.debug(f"Using resolution: {r[0]}x{r[1]}")
-    else:
-        get_resolution(args.size)
+    if size:
+        if args.size:
+            res_set = True  # noqa: F841
+            r[0] = int(args.size.split("x")[0])
+            r[1] = int(args.size.split("x")[1])
+            log.debug(f"Using resolution: {r[0]}x{r[1]}")
+        else:
+            get_resolution(args.size)
     return args
