@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SetBG"
-version = "6.2.2"
+version = "6.2.3"
 dependencies = ["watchdog", "screeninfo", "pillow"]
 authors = [{ name = "Neal Stephenson", email = "nealstep@gmail.com" }]
 description = "Background Setter"

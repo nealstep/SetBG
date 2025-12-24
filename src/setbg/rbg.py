@@ -254,7 +254,6 @@ def cli_rbg() -> None:
             nargs="+",
             help="Directories to choose images from",
         )
-        # TODO #3 handle size argument
         args = base_arg_handler(parser)
         wait = float(args.sleep)
         notify = bool(args.notify)

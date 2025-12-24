@@ -60,7 +60,7 @@ def scale_image(img: Image, size: tuple[int, int]) -> Image:
             scaled_img = img.resize(isize, Resampling.LANCZOS)
     else:
         scaled_img = img
-    log.info(f"scaled size: {scaled_img.size}")
+    log.debug(f"scaled size: {scaled_img.size}")
     return scaled_img
 
 
@@ -101,7 +101,7 @@ def tile_image(img: Image, size: tuple[int, int], rfunc=floor):
                     )
     else:
         tiled_img = img
-    log.info(f"tiled size: {tiled_img.size}")
+    log.debug(f"tiled size: {tiled_img.size}")
     return tiled_img
 
 
