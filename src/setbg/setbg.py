@@ -4,6 +4,7 @@ from setbg.common import SetBGException
 from setbg.common import (
     BG_HOME,
     BG_NAME,
+    BG_SWITCH,
     ENC,
     FLIP_FIRST,
     LNAME,
@@ -15,6 +16,8 @@ from setbg.common import r, system_name, window_manager
 
 from logging import getLogger
 from math import ceil, floor
+from os import remove, symlink
+from os.path import exists
 from PIL.ImageOps import crop, expand
 from setbg.common import (
     base_arg_handler,
@@ -159,7 +162,29 @@ def stripe_image(img: Image, orig: Image, size: tuple[int, int]) -> Image:
 
 def xfwm4(bg_name: str) -> None:
     "set background xfwm4"
-    lines = check_output(
+    bg1_name = pjoin(BG_HOME, BG_SWITCH[0])
+    bg2_name = pjoin(BG_HOME, BG_SWITCH[1])
+    target = 1
+    if exists(bg1_name):
+        remove(bg1_name)
+        if exists(bg2_name):
+            # clean both exist not good
+            remove(bg2_name)
+        # choose bg2
+        target = 2
+    else:
+        if exists(bg2_name):
+            remove(bg2_name)
+        # choose bg1
+        target = 1
+    if target == 1:
+        symlink(BG_NAME, BG_SWITCH[0])
+        bg_name = bg1_name
+    else:
+        symlink(BG_NAME, BG_SWITCH[1])
+        bg_name = bg2_name
+    if BG_SWITCH[0] in bg_name:
+            lines = check_output(
         ["xfconf-query", "--channel", "xfce4-desktop", "--list"]
     ).decode(ENC)
     for line in lines.split("\n"):
