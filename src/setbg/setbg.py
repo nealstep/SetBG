@@ -25,6 +25,7 @@ from setbg.common import (
     check_env,
     check_image,
 )
+from shutil import copy
 from subprocess import check_call, check_output
 
 from os.path import join as pjoin
@@ -164,27 +165,33 @@ def xfwm4(bg_name: str) -> None:
     "set background xfwm4"
     bg1_name = pjoin(BG_HOME, BG_SWITCH[0])
     bg2_name = pjoin(BG_HOME, BG_SWITCH[1])
-    target = 1
     if exists(bg1_name):
         remove(bg1_name)
         if exists(bg2_name):
             # clean both exist not good
             remove(bg2_name)
         # choose bg2
-        target = 2
+        # copy(bg_name, bg2_name)
+        try:
+            symlink(BG_NAME, bg2_name)
+        except OSError:
+            log.warning(
+                f"Failed to create symlink: {BG_NAME} -> {BG_SWITCH[1]}"
+            )
+        bg_name = bg2_name
     else:
         if exists(bg2_name):
             remove(bg2_name)
         # choose bg1
-        target = 1
-    if target == 1:
-        symlink(BG_NAME, BG_SWITCH[0])
+        # copy(bg_name, bg1_name)
+        try:
+            symlink(BG_NAME, bg1_name)
+        except OSError:
+            log.warning(
+                f"Failed to create symlink: {BG_NAME} -> {BG_SWITCH[0]}"
+            )
         bg_name = bg1_name
-    else:
-        symlink(BG_NAME, BG_SWITCH[1])
-        bg_name = bg2_name
-    if BG_SWITCH[0] in bg_name:
-            lines = check_output(
+    lines = check_output(
         ["xfconf-query", "--channel", "xfce4-desktop", "--list"]
     ).decode(ENC)
     for line in lines.split("\n"):
@@ -216,6 +223,7 @@ def gen_image(img: str, dst: str) -> None:
         image = image.convert("RGB")
     log.debug(f"image size: {image.size}")
     res = (r[0], r[1])
+    print(f"Screen resolution: {res[0]}x{res[1]}")
     new_img = scale_image(image, res)
     new_img = tile_image(new_img, res)
     new_img = stripe_image(new_img, image, res)

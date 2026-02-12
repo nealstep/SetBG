@@ -145,6 +145,6 @@ def base_arg_handler(parser: ArgumentParser, size=True) -> Namespace:
             r[0] = int(args.size.split("x")[0])
             r[1] = int(args.size.split("x")[1])
             log.debug(f"Using resolution: {r[0]}x{r[1]}")
-        else:
-            get_resolution(args.size)
+    else:
+        get_resolution(args.size)
     return args
