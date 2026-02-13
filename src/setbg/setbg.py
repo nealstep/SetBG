@@ -25,7 +25,6 @@ from setbg.common import (
     check_env,
     check_image,
 )
-from shutil import copy
 from subprocess import check_call, check_output
 
 from os.path import join as pjoin

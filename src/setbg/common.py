@@ -114,8 +114,7 @@ def base_args(desc: str, size=True) -> ArgumentParser:
         parser.add_argument(
             "-S",
             "--size",
-            default=RESOLUTION,
-            help=f"Overide screen size. Default ({RESOLUTION})",
+            help="Overide screen size use WIDTHxHEIGHT (e.g. 1920x1080)",
         )
     parser.add_argument(
         "--version",
@@ -136,15 +135,15 @@ def base_args(desc: str, size=True) -> ArgumentParser:
 def base_arg_handler(parser: ArgumentParser, size=True) -> Namespace:
     "handle base arguments for SetBG and RSBG"
     args = parser.parse_args()
-    log.debug(f"Arguments: {args}")
     if args.log_level:
         log.setLevel(LG_LEVELS[args.log_level])
+    log.debug(f"Arguments: {args}")
     if size:
         if args.size:
             res_set = True  # noqa: F841
             r[0] = int(args.size.split("x")[0])
             r[1] = int(args.size.split("x")[1])
             log.debug(f"Using resolution: {r[0]}x{r[1]}")
-    else:
-        get_resolution(args.size)
+        else:
+            get_resolution(args.size)
     return args
