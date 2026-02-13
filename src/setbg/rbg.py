@@ -177,6 +177,7 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
         try:
             image = images.get_next_image()
             log.info(f"Setting background to: {image}")
+            print(f"Image: {image}")
             set_background(image)
             for _ in range(int(wait / WAIT)):
                 try:
