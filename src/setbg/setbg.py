@@ -222,7 +222,6 @@ def gen_image(img: str, dst: str) -> None:
         image = image.convert("RGB")
     log.debug(f"image size: {image.size}")
     res = (r[0], r[1])
-    print(f"Screen resolution: {res[0]}x{res[1]}")
     new_img = scale_image(image, res)
     new_img = tile_image(new_img, res)
     new_img = stripe_image(new_img, image, res)
