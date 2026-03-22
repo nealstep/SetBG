@@ -3,17 +3,21 @@ from pathlib import Path
 from PIL import UnidentifiedImageError
 from socket import socket, timeout
 from typing import Self
+
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.api import BaseObserver
 
 from socket import AF_INET, SOCK_DGRAM
 
-from random import seed, shuffle
+from random import seed, sample, shuffle
 from watchdog.observers import Observer
+from setbg.common import r, res_set
+from shutil import rmtree
 
 from logging import getLogger
 from os import getpid, listdir, walk, mkdir
 from os.path import isdir, realpath, expanduser
+from yaml import safe_load
 
 from os.path import join as pjoin
 
@@ -51,15 +55,27 @@ def is_directory(dname: str) -> Path:
     return dpath.resolve(True)
 
 
+def is_file(fname: str) -> Path:
+    "Return a path if its a file"
+    fpath = Path(fname).expanduser()
+    if not fpath.is_file():
+        raise FileNotFoundError
+    return fpath.resolve(True)
+
+
 class Images:
     "Image List and Directory Handler" ""
 
     def __init__(self: Self) -> None:
         "initialize arrays for per directory list and flat image list"
+        self.reset()
+        seed()
+
+    def reset(self: Self) -> None:
+        "reset the image lists and index"
         self.dir_images: dict[str, list[str]] = {}
         self.images: list[str] = []
         self.index = 0
-        seed()
 
     @property
     def empty(self: Self) -> bool:
@@ -112,6 +128,14 @@ class Images:
         if self.index >= len(self.images):
             self.index = 0
         return self.images[index]
+
+    def get_sample(self: Self, limit: int) -> list[str]:
+        "get a sample of images from the list"
+        if not self.images:
+            raise SetBGException("No images available")
+        if limit <= 0 or limit >= len(self.images):
+            return self.images
+        return sample(self.images, limit)
 
 
 images = Images()
@@ -176,7 +200,7 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
     while True:
         try:
             image = images.get_next_image()
-            log.info(f"Setting background to: {image}")
+            # log.info(f"Setting background to: {image}")
             print(f"Image: {image}")
             set_background(image)
             for _ in range(int(wait / WAIT)):
@@ -203,29 +227,63 @@ def rbg(dirs: list[str], wait: float, notify: bool) -> None:
             break
 
 
-def gtbg(dirs: list[str], tree: Path) -> None:
+def gtbg(dir: Path, tree: Path, limit: int) -> None:
     "Generate image tree of preset size"
-    for dn in dirs:
-        dname = realpath(expanduser(dn))
-        if not isdir(dname):
-            log.warning("Skipping non directory: {}".format(dname))
-            continue
-        log.info("Adding directory: {}".format(dname))
-        images.update_dir_tree(dname)
-    for d in images.dir_images:
-        for image in images.dir_images[d]:
-            log.info(f"Processing: {image}")
-            img_path = tree / Path(image).relative_to(Path(d))
-            if not img_path.parent.exists():
-                mkdir(img_path.parent)
-            img_path = img_path.with_suffix(".jpg")
-            try:
-                log.debug(f"Generating: {img_path}")
-                gen_image(image, str(img_path))
-            except UnidentifiedImageError:
-                log.warning(f"Unidentified image file, skipping: {image}")
-    nm_file = tree / ".nomedia"
-    nm_file.touch(exist_ok=True)
+    if not dir.is_dir():
+        log.warning("Skipping non directory: {}".format(dir))
+        return
+    images.update_dir_tree(str(dir))
+    images.update_images()
+    log.debug(f"Processing directory: {dir}")
+    imgs = images.get_sample(limit)
+    log.info(f"images selected: {imgs}")
+    for image in imgs:
+        log.debug(f"Processing: {image}")
+        img_path = tree / Path(image).relative_to(Path(dir))
+        if not img_path.parent.exists():
+            mkdir(img_path.parent)
+        img_path = img_path.with_suffix(".jpg")
+        try:
+            log.debug(f"Generating: {img_path}")
+            gen_image(image, str(img_path))
+        except UnidentifiedImageError:
+            log.warning(f"Unidentified image file, skipping: {image}")
+
+
+def trbg(fpath: Path, limit: int) -> None:
+    "Generate image trees from a file list"
+    global res_set
+    with fpath.open("r") as file:
+        setup = safe_load(file)
+        res_set = True
+        for dir in setup["dirs"]:
+            r[0] = int(dir["res"].split("x")[0])
+            r[1] = int(dir["res"].split("x")[1])
+            dst = Path(dir["dst"])
+            if dst.exists():
+                dsto = dst.with_suffix(".old")
+                if dsto.exists():
+                    if dsto.is_dir():
+                        log.warning(f"removing tree: {dsto}")
+                        rmtree(dsto)
+                dst.rename(dsto)
+            dst.mkdir(exist_ok=True)
+            nm_file = dst / ".nomedia"
+            nm_file.touch(exist_ok=True)
+            log.info(
+                f"Processing: {dir['srcs']} -> {dst} ({r[0]}x{r[1]}, {limit})"
+            )
+            # need to pass subdirs here srcs
+            subdirs = []
+            for src_s in dir["srcs"]:
+                src = Path(src_s).expanduser().resolve(True)
+                subdirs = [x for x in src.iterdir() if x.is_dir()]
+                for subd in subdirs:
+                    sdst = dst / subd.name
+                    log.info(f"Processing subdir: {subd} -> {sdst}")
+                    sdst.mkdir(exist_ok=True)
+                    gtbg(subd, sdst, limit)
+                    images.reset()
 
 
 # TODO #1 add run as a demon
@@ -236,7 +294,10 @@ def cli_rbg() -> None:
         check_env()
         parser = base_args(DESC)
         parser.add_argument(
-            "-s", "--sleep", default=SLEEP, help="Time to pause between images"
+            "-s",
+            "--sleep",
+            default=SLEEP,
+            help="Time to pause between images",
         )
         parser.add_argument(
             "-n",
@@ -251,6 +312,18 @@ def cli_rbg() -> None:
             help="Generate a tree of prescaled images",
         )
         parser.add_argument(
+            "-t",
+            "--tree-generation",
+            type=is_file,
+            help="Generate image tree from file list (add dummy dir to cli)",
+        )
+        parser.add_argument(
+            "-l",
+            "--limit",
+            default=0,
+            help="Limit the number of images in generated tree",
+        )
+        parser.add_argument(
             "DIRS",
             nargs="+",
             help="Directories to choose images from",
@@ -258,9 +331,14 @@ def cli_rbg() -> None:
         args = base_arg_handler(parser)
         wait = float(args.sleep)
         notify = bool(args.notify)
+        limit = int(args.limit)
         if args.gen_tree:
             assert isinstance(args.gen_tree, Path)
-            gtbg(args.DIRS, args.gen_tree)
+            gtbg(args.DIRS, args.gen_tree, limit)
+            return
+        if args.tree_generation:
+            assert isinstance(args.tree_generation, Path)
+            trbg(args.tree_generation, limit)
             return
         log.debug(f"sleep: {wait}")
         with open(pjoin(BG_HOME, "rbg.pid"), "w") as fp:
