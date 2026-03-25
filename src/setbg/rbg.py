@@ -252,6 +252,17 @@ def gtbg(dir: Path, tree: Path, limit: int) -> None:
             log.warning(f"Unidentified image file, skipping: {image}")
 
 
+def make_old(dst: Path) -> None:
+    if dst.exists():
+        dsto = dst.with_suffix(".old")
+        if dsto.exists():
+            if dsto.is_dir():
+                log.warning(f"removing tree: {dsto}")
+                rmtree(dsto)
+        dst.rename(dsto)
+    dst.mkdir(exist_ok=True)
+
+
 def trbg(fpath: Path, limit: int) -> None:
     "Generate image trees from a file list"
     global res_set
@@ -264,14 +275,7 @@ def trbg(fpath: Path, limit: int) -> None:
             r[0] = int(dir["res"].split("x")[0])
             r[1] = int(dir["res"].split("x")[1])
             dst = Path(dir["dst"])
-            if dst.exists():
-                dsto = dst.with_suffix(".old")
-                if dsto.exists():
-                    if dsto.is_dir():
-                        log.warning(f"removing tree: {dsto}")
-                        rmtree(dsto)
-                dst.rename(dsto)
-            dst.mkdir(exist_ok=True)
+            make_old(dst)
             nm_file = dst / ".nomedia"
             nm_file.touch(exist_ok=True)
             log.info(
@@ -338,7 +342,11 @@ def cli_rbg() -> None:
         limit = int(args.limit)
         if args.gen_tree:
             assert isinstance(args.gen_tree, Path)
-            gtbg(args.DIRS, args.gen_tree, limit)
+            make_old(args.gen_tree)
+            for dir in args.DIRS:
+                d = Path(dir).expanduser().resolve(True)
+                gtbg(d, args.gen_tree, limit)
+                images.reset()
             return
         if args.tree_generation:
             assert isinstance(args.tree_generation, Path)
