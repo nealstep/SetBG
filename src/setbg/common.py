@@ -34,6 +34,7 @@ SCALE_MAX = 2  # maximum scale factor for images
 SLEEP = 300  # default sleep time
 WM_NAME = 'wmctrl -m | grep Name | cut -f 2 -d " "'  # Get WM name
 TOLERANCE = 10  # pixels tolerance for resolution matching
+TREE_UMASK = 0o022  # umask for created directories
 
 # globals
 r: list[int] = [0, 0]  # resolution

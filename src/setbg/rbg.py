@@ -11,11 +11,11 @@ from socket import AF_INET, SOCK_DGRAM
 
 from random import seed, sample, shuffle
 from watchdog.observers import Observer
-from setbg.common import r, res_set
+from setbg.common import r, res_set, system_name, TREE_UMASK
 from shutil import rmtree
 
 from logging import getLogger
-from os import getpid, listdir, walk, mkdir
+from os import getpid, listdir, system, walk, mkdir, umask
 from os.path import isdir, realpath, expanduser
 from yaml import safe_load
 
@@ -232,6 +232,8 @@ def gtbg(dir: Path, tree: Path, limit: int) -> None:
     if not dir.is_dir():
         log.warning("Skipping non directory: {}".format(dir))
         return
+    if system_name == "Linux":
+        umask(TREE_UMASK)
     images.update_dir_tree(str(dir))
     images.update_images()
     log.debug(f"Processing directory: {dir}")
@@ -253,6 +255,8 @@ def gtbg(dir: Path, tree: Path, limit: int) -> None:
 def trbg(fpath: Path, limit: int) -> None:
     "Generate image trees from a file list"
     global res_set
+    if system_name == "Linux":
+        umask(TREE_UMASK)
     with fpath.open("r") as file:
         setup = safe_load(file)
         res_set = True
