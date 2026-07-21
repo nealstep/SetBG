@@ -6,6 +6,7 @@ from setbg.common import (
     BG_HOME,
     BG_NAME,
     BG_SWITCH,
+    BG_BASE,
     ENC,
     FLIP_FIRST,
     LNAME,
@@ -15,10 +16,11 @@ from setbg.common import (
 )
 from setbg.common import r, system_name, window_manager
 
+from glob import glob
 from logging import getLogger
 from math import ceil, floor
 from os import remove
-from os.path import exists
+from os.path import exists, isfile
 from PIL.ImageOps import crop, expand
 from setbg.common import (
     base_arg_handler,
@@ -162,34 +164,20 @@ def stripe_image(img: Image, orig: Image, size: tuple[int, int]) -> Image:
     return striped_img
 
 
+from string import ascii_letters
+from random import choices
+
+
 def xfwm4(bg_name: str) -> None:
     "set background xfwm4"
-    bg1_name = pjoin(BG_HOME, BG_SWITCH[0])
-    bg2_name = pjoin(BG_HOME, BG_SWITCH[1])
-    if exists(bg1_name):
-        remove(bg1_name)
-        if exists(bg2_name):
-            # clean both exist not good
-            remove(bg2_name)
-        # choose bg2
-        try:
-            copy(bg_name, bg2_name)
-        except OSError:
-            log.warning(
-                f"Failed to create symlink: {BG_NAME} -> {BG_SWITCH[1]}"
-            )
-        bg_name = bg2_name
-    else:
-        if exists(bg2_name):
-            remove(bg2_name)
-        # choose bg1
-        try:
-            copy(bg_name, bg1_name)
-        except OSError:
-            log.warning(
-                f"Failed to create symlink: {BG_NAME} -> {BG_SWITCH[0]}"
-            )
-        bg_name = bg1_name
+    bg_glob = pjoin(BG_HOME, BG_BASE.format(arg="*"))
+    for file_path in glob(bg_glob):
+        if isfile(file_path):
+            remove(file_path)
+    rname = "".join(choices(ascii_letters, k=8))
+    bgr_name = pjoin(BG_HOME, BG_BASE.format(arg=rname))
+    # print(bg_name, bgr_name)
+    copy(bg_name, bgr_name)
     lines = check_output(
         ["xfconf-query", "--channel", "xfce4-desktop", "--list"]
     ).decode(ENC)
@@ -214,13 +202,12 @@ def xfwm4(bg_name: str) -> None:
                         "xfce4-desktop",
                         "--property",
                     ]
-                    + [prop, "--set", bg_name]
+                    + [prop, "--set", bgr_name]
                 )
         except CalledProcessError as e:
             log.error(
                 f"An error occurred while communicating with xfconf: {e}"
             )
-        # check_call(["xfdesktop", " --reload"])
 
 
 def windows(bg_name: str) -> None:

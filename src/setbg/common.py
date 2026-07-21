@@ -18,6 +18,7 @@ from subprocess import check_output
 BG_HOME = expanduser("~/.bg")  # directory to store computed images
 BG_NAME = "bg.jpg"  # name of computed image
 BG_SWITCH = ["bg-a.jpg", "bg-b.jpg"]
+BG_BASE = "bg-{arg}.jpg"
 BOUNCE = 0.25  # bounce time for directory scans
 D_EXCLUDE = set(
     [".thumbnails", "@eaDir"]
