@@ -1,5 +1,6 @@
 from PIL.Image import Resampling, Transpose, Image
 from setbg.common import SetBGException
+from subprocess import CalledProcessError
 
 from setbg.common import (
     BG_HOME,
@@ -16,7 +17,7 @@ from setbg.common import r, system_name, window_manager
 
 from logging import getLogger
 from math import ceil, floor
-from os import remove, symlink
+from os import remove
 from os.path import exists
 from PIL.ImageOps import crop, expand
 from setbg.common import (
@@ -25,6 +26,7 @@ from setbg.common import (
     check_env,
     check_image,
 )
+from shutil import copy
 from subprocess import check_call, check_output
 
 from os.path import join as pjoin
@@ -170,9 +172,8 @@ def xfwm4(bg_name: str) -> None:
             # clean both exist not good
             remove(bg2_name)
         # choose bg2
-        # copy(bg_name, bg2_name)
         try:
-            symlink(BG_NAME, bg2_name)
+            copy(bg_name, bg2_name)
         except OSError:
             log.warning(
                 f"Failed to create symlink: {BG_NAME} -> {BG_SWITCH[1]}"
@@ -182,9 +183,8 @@ def xfwm4(bg_name: str) -> None:
         if exists(bg2_name):
             remove(bg2_name)
         # choose bg1
-        # copy(bg_name, bg1_name)
         try:
-            symlink(BG_NAME, bg1_name)
+            copy(bg_name, bg1_name)
         except OSError:
             log.warning(
                 f"Failed to create symlink: {BG_NAME} -> {BG_SWITCH[0]}"
@@ -195,16 +195,32 @@ def xfwm4(bg_name: str) -> None:
     ).decode(ENC)
     for line in lines.split("\n"):
         prop = line.strip()
-        if prop.find("image-style") > 0:
-            check_call(
-                ["xfconf-query", "--channel", "xfce4-desktop", "--property"]
-                + [prop, "--set", "1"]
+        try:
+            if prop.find("image-style") > 0:
+                check_call(
+                    [
+                        "xfconf-query",
+                        "--channel",
+                        "xfce4-desktop",
+                        "--property",
+                    ]
+                    + [prop, "--set", "1"]
+                )
+            if prop.find("last-image") > 0 or prop.find("image-path") > 0:
+                check_call(
+                    [
+                        "xfconf-query",
+                        "--channel",
+                        "xfce4-desktop",
+                        "--property",
+                    ]
+                    + [prop, "--set", bg_name]
+                )
+        except CalledProcessError as e:
+            log.error(
+                f"An error occurred while communicating with xfconf: {e}"
             )
-        if prop.find("last-image") > 0 or prop.find("image-path") > 0:
-            check_call(
-                ["xfconf-query", "--channel", "xfce4-desktop", "--property"]
-                + [prop, "--set", bg_name]
-            )
+        # check_call(["xfdesktop", " --reload"])
 
 
 def windows(bg_name: str) -> None:
