@@ -5,7 +5,6 @@ from subprocess import CalledProcessError
 from setbg.common import (
     BG_HOME,
     BG_NAME,
-    BG_SWITCH,
     BG_BASE,
     ENC,
     FLIP_FIRST,
@@ -15,12 +14,14 @@ from setbg.common import (
     TOLERANCE,
 )
 from setbg.common import r, system_name, window_manager
+from random import choices
+from string import ascii_letters
 
 from glob import glob
 from logging import getLogger
 from math import ceil, floor
 from os import remove
-from os.path import exists, isfile
+from os.path import isfile
 from PIL.ImageOps import crop, expand
 from setbg.common import (
     base_arg_handler,
@@ -162,11 +163,6 @@ def stripe_image(img: Image, orig: Image, size: tuple[int, int]) -> Image:
     else:
         striped_img = img
     return striped_img
-
-
-from string import ascii_letters
-from random import choices
-
 
 def xfwm4(bg_name: str) -> None:
     "set background xfwm4"
