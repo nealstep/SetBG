@@ -91,6 +91,7 @@ def tile_image(img: Image, size: tuple[int, int], rfunc=floor):
         except Exception as e:
             print(img.info)
             log.error(f"exception (): {e}")
+            raise e
             exit(1)
         for x in range(round(ratios[0])):
             x_loc = img.size[0] * x
@@ -127,9 +128,12 @@ def x_stripe(
     striped_img: Image,
     size: tuple[int, int],
 ):
-    log.debug("x stripe: {x_size}")
+    log.debug(f"x stripe: {x_size}")
     xs_size = (x_strip, size[1])
-    x_img = make_strip(orig, xs_size)
+    if x_strip < TOLERANCE:
+        x_img = imnew(mode="RGB", size=xs_size, color=(0, 0, 0))
+    else:
+        x_img = make_strip(orig, xs_size)
     striped_img.paste(x_img.transpose(Transpose.FLIP_LEFT_RIGHT), (0, 0))
     striped_img.paste(x_img, (x_strip + x_size, 0))
     return
@@ -163,6 +167,7 @@ def stripe_image(img: Image, orig: Image, size: tuple[int, int]) -> Image:
     else:
         striped_img = img
     return striped_img
+
 
 def xfwm4(bg_name: str) -> None:
     "set background xfwm4"
@@ -245,15 +250,15 @@ def set_background(img: str) -> None:
 
 def cli_setbg() -> None:
     "main entry point for SetBG CLI"
-    try:
-        check_env()
-        parser = base_args(DESC)
-        parser.add_argument("FILE", help="File to set on background")
-        args = base_arg_handler(parser)
-        img = check_image(args.FILE, True)
-        set_background(img)
-    except SetBGException as e:
-        log.error(str(e))
+    # try:
+    check_env()
+    parser = base_args(DESC)
+    parser.add_argument("FILE", help="File to set on background")
+    args = base_arg_handler(parser)
+    img = check_image(args.FILE, True)
+    set_background(img)
+    # except SetBGException as e:
+    #     log.error(str(e))
 
 
 def rsbg() -> None:
