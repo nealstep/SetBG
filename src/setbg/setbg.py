@@ -215,7 +215,35 @@ def windows(bg_name: str) -> None:
     "set background for Windows"
     from ctypes import windll  # type: ignore
 
-    windll.user32.SystemParametersInfoW(20, 0, bg_name, 3)
+    SPI_SETDESKWALLPAPER = 20
+    SPIF_UPDATEINIFILE = 0x01
+    SPIF_SENDWININICHANGE = 0x02
+
+    HWND_BROADCAST = 0xFFFF
+    WM_SETTINGCHANGE = 0x1A
+
+    # windll.user32.SystemParametersInfoW(20, 0, bg_name, 3)
+    windll.user32.SystemParametersInfoW(
+        SPI_SETDESKWALLPAPER,
+        0,
+        bg_name,
+        SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE
+    )
+    windll.user32.SendMessageTimeoutW(
+        HWND_BROADCAST,
+        WM_SETTINGCHANGE,
+        0,
+        "Wallpaper",
+        0x0002,  # SMTO_ABORTIFHUNG
+        500,
+        None
+    )
+    windll.shell32.SHChangeNotify(
+        0x8000000,  # SHCNE_ASSOCCHANGED
+        0x1000,     # SHCNF_IDLIST
+        None,
+        None
+    )
 
 
 def gen_image(img: str, dst: str) -> None:

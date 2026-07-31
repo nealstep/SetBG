@@ -71,7 +71,7 @@ def check_image(image: str, check_exists=False) -> str:
 
 def check_env() -> None:
     "check the environment is setup"
-    global window_manager, RSBG_IMG
+    global RSBG_IMG
     if not exists(BG_HOME):
         mkdir(BG_HOME)
     else:
@@ -90,7 +90,7 @@ def check_env() -> None:
 
 def get_resolution(res: str) -> None:
     "get the system resolution"
-    global res_set, w, h, r
+    global res_set, w, h
     if res_set:
         return
     res_set = True
